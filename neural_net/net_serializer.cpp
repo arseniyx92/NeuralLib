@@ -92,6 +92,7 @@ void Net::Zip(const std::string& FileName){
         std::cerr << "File "+FileName+" can't be written to\n";
         exit(EXIT_FAILURE);
     }
+    net_serializer<int>::serialize(out, (int)function_type);
     net_serializer<int>::serialize(out, (int)mesh[0].size());
     net_serializer<decltype(biases)>::serialize(out, biases);
     net_serializer<decltype(weights)>::serialize(out, weights);
@@ -103,6 +104,7 @@ void Net::UnZip(const std::string& FileName){
         std::cerr << "File "+FileName+" can't be written to\n";
         exit(EXIT_FAILURE);
     }
+    function_type = (FUNCTIONS)net_serializer<int>::deserialize(in);
     int input = net_serializer<int>::deserialize(in);
     biases = net_serializer<decltype(biases)>::deserialize(in);
     weights = net_serializer<decltype(weights)>::deserialize(in);

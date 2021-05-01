@@ -1,6 +1,7 @@
 #include "neural_net.h"
 
-Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers) {
+Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers, int _function_type) {
+    function_type = (FUNCTIONS)_function_type;
     std::mt19937 rnd(75);
     if (input_size < 2){
         std::cerr << "Minimum input size is 2\n";
@@ -148,20 +149,20 @@ void Net::propagate_front(int cur_layer){
     meshZ[cur_layer] = add_matrix<double>(mult_matrix<double>(weights[cur_layer], mesh[cur_layer-1]), biases[cur_layer]);
     mesh[cur_layer] = meshZ[cur_layer];
     for (double & i : mesh[cur_layer])
-        i = sigmoid(i);
+        i = function(i);
 }
 
 std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative, std::vector<Layer>& bias_derivative){
     if (cur_layer != mesh.size()-1) y = add_matrix(y, mesh[cur_layer]);
     std::vector<double> y_prev(mesh[cur_layer-1].size());
     for (int i = 0; i < mesh[cur_layer].size(); ++i) {
-        Layer lol = mult_matrix_on_constant(mesh[cur_layer-1], (2 * sigmoid_derivative(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i])));
+        Layer lol = mult_matrix_on_constant(mesh[cur_layer-1], (2 * derivative_function(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i])));
         derivative[cur_layer][i] = add_matrix(derivative[cur_layer][i], lol);
-        bias_derivative[cur_layer][i] += (2 * sigmoid_derivative(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i]));
+        bias_derivative[cur_layer][i] += (2 * derivative_function(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i]));
         for (int j = 0; j < mesh[cur_layer-1].size(); ++j)
-            y_prev[i] += (2 * weights[cur_layer][i][j] * sigmoid_derivative(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i]));
+            y_prev[i] += (2 * weights[cur_layer][i][j] * derivative_function(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i]));
 
-//        threshold(derivative[cur_layer][i], MOD);
+//        threshold(derivative[cur_layer][i], MOD); derivative_function
     }
 //    threshold(y_prev, 1.0);
 //    threshold(bias_derivative[cur_layer], MOD);
@@ -202,4 +203,28 @@ double Net::accuracy(Table &Xtest, Table &Ytest) {
             TrueAnswers++;
     }
     return TrueAnswers / (double)tests;
+}
+
+double Net::function(double x){
+    switch (function_type) {
+        case SIGMOID:
+            return sigmoid(x);
+        case TANH:
+            return hyp_tan(x);
+        case RELU:
+            return ReLU(x);
+    }
+    return 0;
+}
+
+double Net::derivative_function(double x){
+    switch (function_type) {
+        case SIGMOID:
+            return sigmoid_derivative(x);
+        case TANH:
+            return hyp_tan_derivative(x);
+        case RELU:
+            return ReLU_derivative(x);
+    }
+    return 0;
 }

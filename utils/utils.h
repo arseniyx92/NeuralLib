@@ -25,6 +25,24 @@ inline double sigmoid_derivative(const double& x){
     return sigm*(1-sigm);
 }
 
+inline double hyp_tan(const double& x){
+    return tanh(x);
+}
+
+inline double hyp_tan_derivative(const double& x){
+    return 1 - tanh(x) * tanh(x);
+}
+
+inline double ReLU(const double& x){
+    if (x <= 0) return 0;
+    return x;
+}
+
+inline double ReLU_derivative(const double& x){
+    if (x <= 0) return 0;
+    return 1;
+}
+
 template <typename T>
 std::vector<std::vector<T> > mult_matrix(const std::vector<std::vector<T> >& a, std::vector<std::vector<T> > b){
     int n = a.size();

@@ -49,4 +49,7 @@ int main() {
     nnt.UnZip("netZipped.txt");
     std::cout << nnt.accuracy(Xtest, Ytest) << std::endl;
     return 0;
+//    0.62022 sigmoid
+//    0.482521 tanh
+    return 0;
 }

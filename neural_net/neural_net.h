@@ -8,7 +8,10 @@ using Layer = std::vector<double>;
 class Net {
 public:
     Net() = default;
-    Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers);
+    Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers, int _function_type = 0);
+
+    double function(double x);
+    double derivative_function(double x);
 
     void fit(Table &samp, Table &ans, int global_iterations, int shott = 0);
     int predict(Table &input);
@@ -21,6 +24,12 @@ public:
     void Zip(const std::string& FileName);
     void UnZip(const std::string& FileName);
 private:
+    enum FUNCTIONS{
+        SIGMOID,
+        TANH,
+        RELU,
+    };
+    FUNCTIONS function_type = SIGMOID;
     const double MOD = 100;
     Table samples, answers;
     std::vector<int> shuffler;
