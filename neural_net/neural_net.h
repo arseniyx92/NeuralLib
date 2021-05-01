@@ -15,7 +15,11 @@ public:
     void learn(int global_iterations);
     void propagate_front(int cur_layer);
     std::vector<double> propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative, std::vector<Layer>& bias_derivative);
+
+    void Zip(const std::string& FileName);
+    void UnZip(const std::string& FileName);
 private:
+    const double MOD = 100;
     Table samples, answers;
     std::vector<int> shuffler;
     int shot;

@@ -10,9 +10,11 @@
 #include <random>
 #include <ctime>
 #include <algorithm>
+#include <cstring>
 
 // FUNCTIONS
 inline double sigmoid(const double& x){
+    if (1.0 + std::exp(-x) == 0) return 0;
     return 1.0 / (1.0 + std::exp(-x));
 }
 
@@ -83,4 +85,13 @@ std::vector<T> mult_matrix_on_constant(const std::vector<T>& a, const T& C){
     for (int i = 0; i < n; ++i)
         ans[i] = a[i]*C;
     return ans;
+}
+
+template <typename T>
+void threshold(std::vector<T>& vec, const T& MAXX){
+    for (int i = 0; i < (int)vec.size(); ++i)
+        if (abs(vec[i]) > MAXX){
+            std::cerr << vec[i] << '\n';
+            vec[i] = (vec[i]/abs(vec[i]))*MAXX;
+        }
 }

@@ -57,7 +57,7 @@ void Net::fit(Table &samp, Table &ans, int global_iterations){
     samples = samp;
     answers = ans;
     for (int i = 0; i < samples.get_cols(); ++i)
-        samples.divide_column(i, samples.get_max(i));
+        samples.divide_column(i, std::max(1.0, samples.get_max(i)));
 
     // creating shuffler
     shuffler.resize(samples.get_rows());
@@ -74,6 +74,10 @@ void Net::learn(int global_iterations){
         int cur = 0;
         while (cur < shuffler.size()) {
             iteration++;
+//            if (iteration == 615){
+//                std::cout << "Learned\n";
+//                return;
+//            }
             // get new shuffled data
             std::vector<int> cur_shuffle;
             if (cur + shot > shuffler.size()) {
@@ -119,6 +123,9 @@ void Net::learn(int global_iterations){
                 bias_derivative[layer] = mult_matrix_on_constant(bias_derivative[layer], -1.);
                 weights[layer] = add_matrix(weights[layer], derivative[layer]);
                 biases[layer] = add_matrix(biases[layer], bias_derivative[layer]);
+                threshold(biases[layer], MOD);
+                for (int x = 0; x < mesh[layer].size(); ++x)
+                    threshold(weights[layer][x], MOD);
             }
 
             // learning results
@@ -155,7 +162,11 @@ std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, st
         for (int j = 0; j < mesh[cur_layer-1].size(); ++j)
             y_prev[i] += (weights[cur_layer][i][j] * sigmoid_derivative(meshZ[cur_layer][i]) *
                                                     (mesh[cur_layer][i] - y[i]));
+
+        threshold(derivative[cur_layer][i], MOD);
     }
+    threshold(y_prev, 1.0);
+    threshold(bias_derivative[cur_layer], MOD);
     return y_prev;
 }
 
