@@ -69,11 +69,9 @@ void Net::fit(Table &samp, Table &ans, int global_iterations){
 }
 
 void Net::learn(int global_iterations){
-    int iteration = 0;
-    for (int iter = 0; iter < global_iterations; ++iter) {
+    for (int iteration = 1; iteration <= global_iterations; ++iteration) {
         int cur = 0;
         while (cur < shuffler.size()) {
-            iteration++;
             // get new shuffled data
             std::vector<int> cur_shuffle;
             if (cur + shot > shuffler.size()) {
@@ -98,11 +96,11 @@ void Net::learn(int global_iterations){
                 std::vector<double> y(mesh.back().size(), 0);
                 y[(int) answers.get_value(0, i)] = 1;
 
-                // counting cost
-                double cost = 0;
-                for (int op = 0; op < mesh.back().size(); ++op)
-                    cost += (mesh.back()[op] - y[op]) * (mesh.back()[op] - y[op]);
-                std::cout << iteration << " iteration - COST: " << cost << std::endl;
+//                // counting cost
+//                double cost = 0;
+//                for (int op = 0; op < mesh.back().size(); ++op)
+//                    cost += (mesh.back()[op] - y[op]) * (mesh.back()[op] - y[op]);
+//                std::cout << iteration << " iteration - COST: " << cost << std::endl;
 
                 // back_propagation
                 for (int layer = (int) mesh.size() - 1; layer >= 1; --layer)
@@ -119,9 +117,9 @@ void Net::learn(int global_iterations){
                 bias_derivative[layer] = mult_matrix_on_constant(bias_derivative[layer], -1.);
                 weights[layer] = add_matrix(weights[layer], derivative[layer]);
                 biases[layer] = add_matrix(biases[layer], bias_derivative[layer]);
-                threshold(biases[layer], MOD);
-                for (int x = 0; x < mesh[layer].size(); ++x)
-                    threshold(weights[layer][x], MOD);
+//                threshold(biases[layer], MOD);
+//                for (int x = 0; x < mesh[layer].size(); ++x)
+//                    threshold(weights[layer][x], MOD);
             }
 
             // learning results
@@ -150,19 +148,17 @@ std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, st
     if (cur_layer != mesh.size()-1) y = add_matrix(y, mesh[cur_layer]);
     std::vector<double> y_prev(mesh[cur_layer-1].size());
     for (int i = 0; i < mesh[cur_layer].size(); ++i) {
-        Layer lol = mult_matrix_on_constant(mesh[cur_layer-1], (2 * sigmoid_derivative(meshZ[cur_layer][i]) *
-                                                              (mesh[cur_layer][i] - y[i])));
+        Layer lol = mult_matrix_on_constant(mesh[cur_layer-1], (2 * sigmoid_derivative(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i])));
         derivative[cur_layer][i] = add_matrix(derivative[cur_layer][i], lol);
-        bias_derivative[cur_layer][i] += (1 * sigmoid_derivative(meshZ[cur_layer][i]) *
-                                         (mesh[cur_layer][i] - y[i]));
+        bias_derivative[cur_layer][i] += (2 * sigmoid_derivative(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i]));
         for (int j = 0; j < mesh[cur_layer-1].size(); ++j)
-            y_prev[i] += (weights[cur_layer][i][j] * sigmoid_derivative(meshZ[cur_layer][i]) *
-                                                    (mesh[cur_layer][i] - y[i]));
+            y_prev[i] += (2 * weights[cur_layer][i][j] * sigmoid_derivative(meshZ[cur_layer][i]) * (mesh[cur_layer][i] - y[i]));
 
-        threshold(derivative[cur_layer][i], MOD);
+//        threshold(derivative[cur_layer][i], MOD);
     }
-    threshold(y_prev, 1.0);
-    threshold(bias_derivative[cur_layer], MOD);
+//    threshold(y_prev, 1.0);
+//    threshold(bias_derivative[cur_layer], MOD);
+    y_prev = mult_matrix_on_constant(y_prev, -1.0);
     return y_prev;
 }
 
