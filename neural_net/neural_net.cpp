@@ -71,32 +71,43 @@ void Net::fit(Table &samp, Table &ans){
 
 void Net::learn(){
     int cur = 0;
-    while (cur < shuffler.size()){
+    while (cur < shuffler.size()) {
         // get new shuffled data
         std::vector<int> cur_shuffle;
-        if (cur + shot > shuffler.size()){
+        if (cur + shot > shuffler.size()) {
             for (; cur < shuffler.size(); ++cur)
                 cur_shuffle.push_back(shuffler[cur]);
-        }else{
-            for (int i = cur; i < cur+shot; ++i)
+        } else {
+            for (int i = cur; i < cur + shot; ++i)
                 cur_shuffle.push_back(shuffler[i]);
             cur += shot;
         }
         // front propagate each sample
+        std::vector<Layer> bias_derivative = init_biases;
         std::vector<std::vector<Layer> > derivative = init;
-        for (int i:cur_shuffle){
+        for (int i:cur_shuffle) {
             // front propagation
             for (int x = 0; x < mesh[0].size(); ++x)
                 mesh[0][x] = samples.get_value(x, i);
-            for (int layer = 1; layer < (int)mesh.size(); ++layer)
+            for (int layer = 1; layer < (int) mesh.size(); ++layer)
                 propagate_front(layer);
 
             // back_propagation
+            std::vector<double> y(mesh.back().size(), 0);
+            y[(int) answers.get_value(0, i)] = 1;
+            for (int layer = (int) mesh.size(); layer >= 1; --layer)
+                y = propagate_back(layer, y, derivative, bias_derivative);
+        }
+        // get average sum
+        double divisor = 1.0 / (double) cur_shuffle.size();
+        for (int layer = 1; layer < (int) mesh.size(); ++layer){
+            mult_matrix_on_constant(derivative[layer], divisor);
+            mult_matrix_on_constant(bias_derivative[layer], divisor);
+            // updating weights
+            weights[layer] = add_matrix(weights[layer], derivative[layer]);
+            biases[layer] = add_matrix(biases[layer], bias_derivative[layer]);
         }
     }
-    // calculate error (cost)
-    // add cost to sum
-    // get average sum
 }
 
 void Net::propagate_front(int cur_layer){
@@ -106,12 +117,20 @@ void Net::propagate_front(int cur_layer){
         i = sigmoid(i);
 }
 
-std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative){
+std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative, std::vector<Layer>& bias_derivative){
+    if (cur_layer != mesh.size()-1) y = add_matrix(y, mesh[cur_layer]);
+    std::vector<double> y_prev(mesh[cur_layer-1].size());
     for (int i = 0; i < mesh[cur_layer].size(); ++i) {
         Layer lol = mult_matrix_on_constant(mesh[cur_layer], (2 * sigmoid_derivative(meshZ[cur_layer][i]) *
                                                               (mesh[cur_layer][i] - y[i])));
         derivative[cur_layer][i] = add_matrix(derivative[cur_layer][i], lol);
+        bias_derivative[cur_layer][i] += (1 * sigmoid_derivative(meshZ[cur_layer][i]) *
+                                         (mesh[cur_layer][i] - y[i]));
+        for (int j = 0; j < mesh[cur_layer-1].size(); ++j)
+            y_prev[i] += (weights[cur_layer][i][j] * sigmoid_derivative(meshZ[cur_layer][i]) *
+                                                    (mesh[cur_layer][i] - y[i]));
     }
+    return y_prev;
 }
 
 int Net::predict(Table &input){

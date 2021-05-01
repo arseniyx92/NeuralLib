@@ -14,7 +14,7 @@ public:
     int predict(Table &input);
     void learn();
     void propagate_front(int cur_layer);
-    std::vector<double> propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative);
+    std::vector<double> propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative, std::vector<Layer>& bias_derivative);
 private:
     Table samples, answers;
     std::vector<int> shuffler;
