@@ -90,8 +90,6 @@ std::vector<T> mult_matrix_on_constant(const std::vector<T>& a, const T& C){
 template <typename T>
 void threshold(std::vector<T>& vec, const T& MAXX){
     for (int i = 0; i < (int)vec.size(); ++i)
-        if (abs(vec[i]) > MAXX){
-            std::cerr << vec[i] << '\n';
+        if (abs(vec[i]) > MAXX)
             vec[i] = (vec[i]/abs(vec[i]))*MAXX;
-        }
 }

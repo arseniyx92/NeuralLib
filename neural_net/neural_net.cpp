@@ -74,10 +74,6 @@ void Net::learn(int global_iterations){
         int cur = 0;
         while (cur < shuffler.size()) {
             iteration++;
-//            if (iteration == 615){
-//                std::cout << "Learned\n";
-//                return;
-//            }
             // get new shuffled data
             std::vector<int> cur_shuffle;
             if (cur + shot > shuffler.size()) {
@@ -154,7 +150,7 @@ std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, st
     if (cur_layer != mesh.size()-1) y = add_matrix(y, mesh[cur_layer]);
     std::vector<double> y_prev(mesh[cur_layer-1].size());
     for (int i = 0; i < mesh[cur_layer].size(); ++i) {
-        Layer lol = mult_matrix_on_constant(mesh[cur_layer], (2 * sigmoid_derivative(meshZ[cur_layer][i]) *
+        Layer lol = mult_matrix_on_constant(mesh[cur_layer-1], (2 * sigmoid_derivative(meshZ[cur_layer][i]) *
                                                               (mesh[cur_layer][i] - y[i])));
         derivative[cur_layer][i] = add_matrix(derivative[cur_layer][i], lol);
         bias_derivative[cur_layer][i] += (1 * sigmoid_derivative(meshZ[cur_layer][i]) *
