@@ -1,7 +1,7 @@
 #include "neural_net.h"
 
 Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers) {
-    std::mt19937 rnd(42);
+    std::mt19937 rnd(75);
     if (input_size < 2){
         std::cerr << "Minimum input size is 2\n";
         exit(EXIT_FAILURE);
@@ -39,8 +39,9 @@ Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::v
     meshZ = mesh;
 }
 
-void Net::fit(Table &samp, Table &ans, int global_iterations){
-    std::mt19937 rnd(42);
+void Net::fit(Table &samp, Table &ans, int global_iterations, int shott){
+    shot = shott;
+    std::mt19937 rnd(75);
     if (ans.get_cols() != 1){
         std::cerr << "Output table has more than 1 column\n";
         exit(EXIT_FAILURE);
@@ -64,13 +65,14 @@ void Net::fit(Table &samp, Table &ans, int global_iterations){
     for (int i = 0; i < shuffler.size(); ++i)
         shuffler[i] = i;
     std::shuffle(shuffler.begin(), shuffler.end(), rnd);
-    shot = std::max((int)log((int)shuffler.size()), 2);
+    if (shot == 0) shot = std::max((int)log((int)shuffler.size())/10, 2);
     learn(global_iterations);
 }
 
 void Net::learn(int global_iterations){
     for (int iteration = 1; iteration <= global_iterations; ++iteration) {
         int cur = 0;
+        bool ok = true;
         while (cur < shuffler.size()) {
             // get new shuffled data
             std::vector<int> cur_shuffle;
@@ -105,7 +107,6 @@ void Net::learn(int global_iterations){
                 // back_propagation
                 for (int layer = (int) mesh.size() - 1; layer >= 1; --layer)
                     y = propagate_back(layer, y, derivative, bias_derivative);
-
             }
             // get average sum
             double divisor = 1.0 / (double) cur_shuffle.size();
@@ -113,7 +114,8 @@ void Net::learn(int global_iterations){
                 mult_matrix_on_constant(derivative[layer], divisor);
                 mult_matrix_on_constant(bias_derivative[layer], divisor);
                 // updating weights
-                derivative[layer] = mult_matrix_on_constant(derivative[layer], -1.);
+
+                derivative[layer] = mult_matrix_on_constant(derivative[layer], -1.0);
                 bias_derivative[layer] = mult_matrix_on_constant(bias_derivative[layer], -1.);
                 weights[layer] = add_matrix(weights[layer], derivative[layer]);
                 biases[layer] = add_matrix(biases[layer], bias_derivative[layer]);
@@ -123,15 +125,20 @@ void Net::learn(int global_iterations){
             }
 
             // learning results
-            for (int i:cur_shuffle) {
-                std::vector<double> y(mesh.back().size(), 0);
-                y[(int) answers.get_value(0, i)] = 1;
-                for (int layer = 1; layer < (int) mesh.size(); ++layer)
-                    propagate_front(layer);
-                double cost = 0;
-                for (int op = 0; op < mesh.back().size(); ++op)
-                    cost += (mesh.back()[op] - y[op]) * (mesh.back()[op] - y[op]);
-                std::cout << iteration << " iteration (after learning) - COST: " << cost << std::endl;
+            if (ok && iteration % 50 == 0) {
+                ok = false;
+                std::cout << (double)iteration / (double)global_iterations << "% finished" << std::endl;
+                for (int j = 0; j < 2; ++j) {
+                    int i = cur_shuffle[j];
+                    std::vector<double> y(mesh.back().size(), 0);
+                    y[(int) answers.get_value(0, i)] = 1;
+                    for (int layer = 1; layer < (int) mesh.size(); ++layer)
+                        propagate_front(layer);
+                    double cost = 0;
+                    for (int op = 0; op < mesh.back().size(); ++op)
+                        cost += (mesh.back()[op] - y[op]) * (mesh.back()[op] - y[op]);
+                    std::cout << iteration << " iteration - COST: " << cost << std::endl;
+                }
             }
         }
     }
@@ -172,4 +179,27 @@ int Net::predict(Table &input){
     for (int i = 0; i < mesh.back().size(); ++i)
         if (mesh.back()[maxx] < mesh.back()[i]) maxx = i;
     return maxx;
+}
+
+int Net::predict(Table input){
+    for (int x = 0; x < mesh[0].size(); ++x)
+        mesh[0][x] = input.get_value(x, 0);
+    for (int layer = 1; layer < (int)mesh.size(); ++layer)
+        propagate_front(layer);
+
+    int maxx = 0;
+    for (int i = 0; i < mesh.back().size(); ++i)
+        if (mesh.back()[maxx] < mesh.back()[i]) maxx = i;
+    return maxx;
+}
+
+double Net::accuracy(Table &Xtest, Table &Ytest) {
+    int tests = Xtest.get_rows();
+    double TrueAnswers = 0;
+    for (int i = 0; i < tests; ++i){
+        std::cout << predict(Xtest.slice(0, Xtest.get_cols(), i, i + 1)) << ' ' << Ytest.get_value(0, i) << '\n';
+        if (predict(Xtest.slice(0, Xtest.get_cols(), i, i + 1)) == Ytest.get_value(0, i))
+            TrueAnswers++;
+    }
+    return TrueAnswers / (double)tests;
 }

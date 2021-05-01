@@ -10,8 +10,10 @@ public:
     Net() = default;
     Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers);
 
-    void fit(Table &samp, Table &ans, int global_iterations);
+    void fit(Table &samp, Table &ans, int global_iterations, int shott = 0);
     int predict(Table &input);
+    int predict(Table input); // if not by link
+    double accuracy(Table &Xtest, Table &Ytest);
     void learn(int global_iterations);
     void propagate_front(int cur_layer);
     std::vector<double> propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative, std::vector<Layer>& bias_derivative);

@@ -11,6 +11,8 @@
 #include <ctime>
 #include <algorithm>
 #include <cstring>
+#include <thread>
+#include <mutex>
 
 // FUNCTIONS
 inline double sigmoid(const double& x){
