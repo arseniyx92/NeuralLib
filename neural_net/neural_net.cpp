@@ -1,8 +1,7 @@
 #include "neural_net.h"
 
-std::mt19937 rnd(time(NULL));
-
 Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers) {
+    std::mt19937 rnd(42);
     if (input_size < 2){
         std::cerr << "Minimum input size is 2\n";
         exit(EXIT_FAILURE);
@@ -16,19 +15,18 @@ Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::v
     mesh.back().resize(output_size);
 
     auto dist = std::uniform_real_distribution<double>(0.0, 1.0);
-    for (int i = 1; i < (int) mesh.size(); ++i){
+    for (int i = 1; i < (int)mesh.size()-1; ++i){
         mesh[i].resize(hidden_layers[i - 1]);
         init[i].assign(hidden_layers[i - 1], std::vector<double>(mesh[i-1].size(), 0));
         weights[i].resize(hidden_layers[i - 1], std::vector<double>(mesh[i-1].size()));
-        biases.resize(hidden_layers[i - 1]);
-        init_biases.resize(hidden_layers[i - 1]);
+        biases[i].resize(hidden_layers[i - 1]);
+        init_biases[i].resize(hidden_layers[i - 1]);
         for (int j = 0; j < mesh[i].size(); ++j) {
             biases[i][j] = dist(rnd);
             for (int x = 0; x < (int) mesh[i - 1].size(); ++x)
                 weights[i][j][x] = dist(rnd);
         }
     }
-    rnd = std::mt19937(time(NULL));
     weights.back().resize(output_size, std::vector<double>(mesh[mesh.size()-2].size()));
     init.back().assign(output_size, std::vector<double>(mesh[mesh.size()-2].size(), 0));
     biases.back().resize(output_size);
@@ -41,7 +39,8 @@ Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::v
     meshZ = mesh;
 }
 
-void Net::fit(Table &samp, Table &ans){
+void Net::fit(Table &samp, Table &ans, int global_iterations){
+    std::mt19937 rnd(42);
     if (ans.get_cols() != 1){
         std::cerr << "Output table has more than 1 column\n";
         exit(EXIT_FAILURE);
@@ -50,7 +49,7 @@ void Net::fit(Table &samp, Table &ans){
         std::cerr << "Incorrect input data\n";
         exit(EXIT_FAILURE);
     }
-    if ((int)(ans.get_max(0)-ans.get_min(0)) != (int)mesh.back().size()){
+    if ((int)(ans.get_max(0)-ans.get_min(0) + 1) != (int)mesh.back().size()){
         std::cerr << "Incorrect output data\n";
         exit(EXIT_FAILURE);
     }
@@ -64,48 +63,75 @@ void Net::fit(Table &samp, Table &ans){
     shuffler.resize(samples.get_rows());
     for (int i = 0; i < shuffler.size(); ++i)
         shuffler[i] = i;
-    std::shuffle(shuffler.begin(), shuffler.end(), rnd());
+    std::shuffle(shuffler.begin(), shuffler.end(), rnd);
     shot = std::max((int)log((int)shuffler.size()), 2);
-    learn();
+    learn(global_iterations);
 }
 
-void Net::learn(){
-    int cur = 0;
-    while (cur < shuffler.size()) {
-        // get new shuffled data
-        std::vector<int> cur_shuffle;
-        if (cur + shot > shuffler.size()) {
-            for (; cur < shuffler.size(); ++cur)
-                cur_shuffle.push_back(shuffler[cur]);
-        } else {
-            for (int i = cur; i < cur + shot; ++i)
-                cur_shuffle.push_back(shuffler[i]);
-            cur += shot;
-        }
-        // front propagate each sample
-        std::vector<Layer> bias_derivative = init_biases;
-        std::vector<std::vector<Layer> > derivative = init;
-        for (int i:cur_shuffle) {
-            // front propagation
-            for (int x = 0; x < mesh[0].size(); ++x)
-                mesh[0][x] = samples.get_value(x, i);
-            for (int layer = 1; layer < (int) mesh.size(); ++layer)
-                propagate_front(layer);
+void Net::learn(int global_iterations){
+    int iteration = 0;
+    for (int iter = 0; iter < global_iterations; ++iter) {
+        int cur = 0;
+        while (cur < shuffler.size()) {
+            iteration++;
+            // get new shuffled data
+            std::vector<int> cur_shuffle;
+            if (cur + shot > shuffler.size()) {
+                for (; cur < shuffler.size(); ++cur)
+                    cur_shuffle.push_back(shuffler[cur]);
+            } else {
+                for (int i = cur; i < cur + shot; ++i)
+                    cur_shuffle.push_back(shuffler[i]);
+                cur += shot;
+            }
+            // front propagate each sample
+            std::vector<Layer> bias_derivative = init_biases;
+            std::vector<std::vector<Layer> > derivative = init;
+            for (int i:cur_shuffle) {
+                // front propagation
+                for (int x = 0; x < mesh[0].size(); ++x)
+                    mesh[0][x] = samples.get_value(x, i);
+                for (int layer = 1; layer < (int) mesh.size(); ++layer)
+                    propagate_front(layer);
 
-            // back_propagation
-            std::vector<double> y(mesh.back().size(), 0);
-            y[(int) answers.get_value(0, i)] = 1;
-            for (int layer = (int) mesh.size(); layer >= 1; --layer)
-                y = propagate_back(layer, y, derivative, bias_derivative);
-        }
-        // get average sum
-        double divisor = 1.0 / (double) cur_shuffle.size();
-        for (int layer = 1; layer < (int) mesh.size(); ++layer){
-            mult_matrix_on_constant(derivative[layer], divisor);
-            mult_matrix_on_constant(bias_derivative[layer], divisor);
-            // updating weights
-            weights[layer] = add_matrix(weights[layer], derivative[layer]);
-            biases[layer] = add_matrix(biases[layer], bias_derivative[layer]);
+                // right answer
+                std::vector<double> y(mesh.back().size(), 0);
+                y[(int) answers.get_value(0, i)] = 1;
+
+                // counting cost
+                double cost = 0;
+                for (int op = 0; op < mesh.back().size(); ++op)
+                    cost += (mesh.back()[op] - y[op]) * (mesh.back()[op] - y[op]);
+                std::cout << iteration << " iteration - COST: " << cost << std::endl;
+
+                // back_propagation
+                for (int layer = (int) mesh.size() - 1; layer >= 1; --layer)
+                    y = propagate_back(layer, y, derivative, bias_derivative);
+
+            }
+            // get average sum
+            double divisor = 1.0 / (double) cur_shuffle.size();
+            for (int layer = 1; layer < (int) mesh.size(); ++layer) {
+                mult_matrix_on_constant(derivative[layer], divisor);
+                mult_matrix_on_constant(bias_derivative[layer], divisor);
+                // updating weights
+                derivative[layer] = mult_matrix_on_constant(derivative[layer], -1.);
+                bias_derivative[layer] = mult_matrix_on_constant(bias_derivative[layer], -1.);
+                weights[layer] = add_matrix(weights[layer], derivative[layer]);
+                biases[layer] = add_matrix(biases[layer], bias_derivative[layer]);
+            }
+
+            // learning results
+            for (int i:cur_shuffle) {
+                std::vector<double> y(mesh.back().size(), 0);
+                y[(int) answers.get_value(0, i)] = 1;
+                for (int layer = 1; layer < (int) mesh.size(); ++layer)
+                    propagate_front(layer);
+                double cost = 0;
+                for (int op = 0; op < mesh.back().size(); ++op)
+                    cost += (mesh.back()[op] - y[op]) * (mesh.back()[op] - y[op]);
+                std::cout << iteration << " iteration (after learning) - COST: " << cost << std::endl;
+            }
         }
     }
 }

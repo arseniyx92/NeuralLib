@@ -10,17 +10,16 @@ public:
     Net() = default;
     Net(int input_size, int output_size, int hidden_layers_amount, const std::vector<int>& hidden_layers);
 
-    void fit(Table &samp, Table &ans);
+    void fit(Table &samp, Table &ans, int global_iterations);
     int predict(Table &input);
-    void learn();
+    void learn(int global_iterations);
     void propagate_front(int cur_layer);
     std::vector<double> propagate_back(int cur_layer, std::vector<double> y, std::vector<std::vector<Layer> >& derivative, std::vector<Layer>& bias_derivative);
 private:
     Table samples, answers;
     std::vector<int> shuffler;
     int shot;
-    std::vector<Layer> mesh;
-    std::vector<Layer> meshZ;
+    std::vector<Layer> mesh, meshZ;
     std::vector<std::vector<double> > biases, init_biases;
     std::vector<std::vector<std::vector<double> > > weights, init;
 };
