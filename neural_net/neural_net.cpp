@@ -16,6 +16,8 @@ Net::Net(int input_size, int output_size, int hidden_layers_amount, const std::v
     mesh.back().resize(output_size);
 
     auto dist = std::uniform_real_distribution<double>(0.0, 1.0);
+    if (function_type == TANH)
+        dist = std::uniform_real_distribution<double>(-1.0, 1.0);
     for (int i = 1; i < (int)mesh.size()-1; ++i){
         mesh[i].resize(hidden_layers[i - 1]);
         init[i].assign(hidden_layers[i - 1], std::vector<double>(mesh[i-1].size(), 0));
@@ -97,6 +99,8 @@ void Net::learn(int global_iterations){
 
                 // right answer
                 std::vector<double> y(mesh.back().size(), 0);
+                if (function_type == TANH)
+                    y.assign(mesh.back().size(), -1);
                 y[(int) answers.get_value(0, i)] = 1;
 
 //                // counting cost
@@ -132,6 +136,8 @@ void Net::learn(int global_iterations){
                 for (int j = 0; j < 2; ++j) {
                     int i = cur_shuffle[j];
                     std::vector<double> y(mesh.back().size(), 0);
+                    if (function_type == TANH)
+                        y.assign(mesh.back().size(), -1);
                     y[(int) answers.get_value(0, i)] = 1;
                     for (int layer = 1; layer < (int) mesh.size(); ++layer)
                         propagate_front(layer);
@@ -170,17 +176,17 @@ std::vector<double> Net::propagate_back(int cur_layer, std::vector<double> y, st
     return y_prev;
 }
 
-int Net::predict(Table &input){
-    for (int x = 0; x < mesh[0].size(); ++x)
-        mesh[0][x] = input.get_value(x, 0);
-    for (int layer = 1; layer < (int)mesh.size(); ++layer)
-        propagate_front(layer);
-
-    int maxx = 0;
-    for (int i = 0; i < mesh.back().size(); ++i)
-        if (mesh.back()[maxx] < mesh.back()[i]) maxx = i;
-    return maxx;
-}
+//int Net::predict(Table &input){ // TODO:
+//    for (int x = 0; x < mesh[0].size(); ++x)
+//        mesh[0][x] = input.get_value(x, 0);
+//    for (int layer = 1; layer < (int)mesh.size(); ++layer)
+//        propagate_front(layer);
+//
+//    int maxx = 0;
+//    for (int i = 0; i < mesh.back().size(); ++i)
+//        if (mesh.back()[maxx] < mesh.back()[i]) maxx = i;
+//    return maxx;
+//}
 
 int Net::predict(Table input){
     for (int x = 0; x < mesh[0].size(); ++x)

@@ -14,7 +14,7 @@ public:
     double derivative_function(double x);
 
     void fit(Table &samp, Table &ans, int global_iterations, int shott = 0);
-    int predict(Table &input);
+//    int predict(Table &input); // TODO: make it possible
     int predict(Table input); // if not by link
     double accuracy(Table &Xtest, Table &Ytest);
     void learn(int global_iterations);
@@ -27,7 +27,7 @@ private:
     enum FUNCTIONS{
         SIGMOID,
         TANH,
-        RELU,
+        RELU, // doesn't work
     };
     FUNCTIONS function_type = SIGMOID;
     const double MOD = 100;
